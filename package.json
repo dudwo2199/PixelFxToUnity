@@ -1,0 +1,20 @@
+{
+  "name": "pixelfx-to-unity",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "predev": "node tools/generate-catalog.mjs",
+    "prebuild": "node tools/generate-catalog.mjs",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5"
+  }
+}

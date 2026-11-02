@@ -1,0 +1,4 @@
+Node.js v24.22.1 LTS
+Windows x64 portable runtime
+Downloaded from https://nodejs.org/dist/v24.22.1/node-v24.22.1-win-x64.zip
+Official SHASUMS256.txt verified before packaging.

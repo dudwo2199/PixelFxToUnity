@@ -1,0 +1,10 @@
+.boot-error {
+  min-height: 100vh;
+  padding: 12vh max(24px, calc((100vw - 760px) / 2));
+  color: #eceef2;
+  background: #101115;
+  font: 14px/1.6 "Segoe UI", "Malgun Gothic", sans-serif;
+}
+.boot-error h1 { margin: 0 0 10px; color: #d3ff5c; font-size: 22px; }
+.boot-error p { color: #f4b2a8; }
+.boot-error pre { overflow: auto; padding: 16px; border: 1px solid #343741; border-radius: 6px; color: #bdc0ca; background: #181a20; font: 12px/1.6 Consolas, monospace; white-space: pre-wrap; }
