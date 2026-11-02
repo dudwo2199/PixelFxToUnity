@@ -1,4 +1,6 @@
 import manifest from "./effects.json";
+import descriptionsKo from "./descriptions.ko.json";
+import namesKo from "./names.ko.json";
 import { PAL } from "../vendor/pixelfx/core/color.js";
 
 const moduleLoaders = import.meta.glob([
@@ -25,8 +27,15 @@ export const CATEGORY_LABELS = {
   ui: "UI", pickups: "Pickups", transitions: "Transitions", critters: "Critters",
 };
 
+export const CATEGORY_LABELS_KO = {
+  fire: "불꽃", explosions: "폭발", water: "물", ice: "얼음", lightning: "번개",
+  scifi: "SF", melee: "근접 전투", impacts: "충격", projectiles: "투사체", spawn: "생성·사망",
+  arcane: "비전 마법", holy: "신성", shadow: "그림자", status: "상태 효과", nature: "자연",
+  weather: "날씨", ui: "사용자 인터페이스", pickups: "아이템 획득", transitions: "화면 전환", critters: "생물",
+};
+
 export const CATEGORIES = CATEGORY_ORDER.map((id) => ({ id, name: CATEGORY_LABELS[id] }));
-export const EFFECTS = manifest.map((entry) => ({ ...entry, mod: null }));
+export const EFFECTS = manifest.map((entry) => ({ ...entry, meta: { ...entry.meta, nameKo: namesKo[entry.id] ?? "", descKo: descriptionsKo[entry.id] ?? entry.meta.desc }, mod: null }));
 export const EFFECT_BY_ID = new Map(EFFECTS.map((effect) => [effect.id, effect]));
 export const PALETTES = PAL;
 export const PALETTE_NAMES = Object.keys(PAL);

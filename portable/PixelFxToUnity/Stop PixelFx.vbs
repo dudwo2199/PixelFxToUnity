@@ -6,7 +6,7 @@ root = fso.GetParentFolderName(WScript.ScriptFullName)
 portPath = fso.BuildPath(root, ".server-port")
 
 If Not fso.FileExists(portPath) Then
-  MsgBox "실행 중인 PixelFx 서버를 찾지 못했습니다.", vbInformation, "PixelFx → Unity"
+  MsgBox "PixelFx server is not running.", vbInformation, "PixelFx to Unity"
   WScript.Quit 0
 End If
 
@@ -19,8 +19,8 @@ Set request = CreateObject("MSXML2.XMLHTTP")
 request.Open "POST", "http://127.0.0.1:" & port & "/__shutdown", False
 request.Send
 If Err.Number <> 0 Then
-  MsgBox "서버에 연결하지 못했습니다. 앱이 이미 종료되었을 수 있습니다.", vbExclamation, "PixelFx → Unity"
+  MsgBox "Could not connect to the server. It may already be stopped.", vbExclamation, "PixelFx to Unity"
 Else
-  MsgBox "PixelFx 서버를 종료했습니다.", vbInformation, "PixelFx → Unity"
+  MsgBox "PixelFx server stopped.", vbInformation, "PixelFx to Unity"
 End If
 On Error GoTo 0

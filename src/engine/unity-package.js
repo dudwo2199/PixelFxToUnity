@@ -3,7 +3,7 @@ import { loadEffect } from "../data/catalog.js";
 
 const encoder = new TextEncoder();
 
-export async function createUnityPackage(effects, settingsFor, onProgress = () => {}) {
+export async function createUnityPackage(effects, settingsFor, onProgress = () => {}, selectedFramesFor = () => []) {
   const entries = [];
   let rendered = 0;
   for (const effect of effects) {
@@ -11,11 +11,10 @@ export async function createUnityPackage(effects, settingsFor, onProgress = () =
     const settings = settingsFor(effect);
     const sheet = await renderSpriteSheet(effect, settings, (subProgress) => {
       onProgress({ current: rendered + subProgress, total: effects.length, label: effect.name });
-    });
+    }, selectedFramesFor(effect));
     const category = effect.category === "scifi" ? "Sci-Fi" : effect.category === "spawn" ? "Spawn & Death" : titleCase(effect.category);
     const base = `Assets/PixelFx/${category}/${safeName(effect.name)}`;
     const sheetPath = `${base}/${safeName(effect.slug)}.png`;
-    const jsonPath = `${base}/${safeName(effect.slug)}.json`;
     const animPath = `${base}/${safeName(effect.slug)}.anim`;
     const controllerPath = `${base}/${safeName(effect.slug)}.controller`;
     const sheetGuid = await stableGuid(sheetPath);
@@ -26,8 +25,7 @@ export async function createUnityPackage(effects, settingsFor, onProgress = () =
     const animGuid = await stableGuid(animPath);
     const assets = [
       { path: sheetPath, data: new Uint8Array(await sheet.sheetBlob.arrayBuffer()), meta: textureMeta(sheetGuid, spriteNames, sheet.json.frames, sheet.json.meta.size.h, spritePivots, spriteFileIds, spriteIds) },
-      { path: jsonPath, data: encoder.encode(JSON.stringify(sheet.json, null, 2)), meta: textMeta(await stableGuid(jsonPath)) },
-      { path: animPath, data: encoder.encode(animationYaml(effect, sheetGuid, spriteFileIds, settings.fps, sheet.count, effect.meta.loop)), meta: nativeMeta(animGuid) },
+      { path: animPath, data: encoder.encode(animationYaml(effect, sheetGuid, spriteFileIds, settings.fps, sheet.count, settings.loop ?? effect.meta.loop, settings.exportTarget)), meta: nativeMeta(animGuid) },
       { path: controllerPath, data: encoder.encode(controllerYaml(effect, animGuid)), meta: nativeMeta(await stableGuid(controllerPath), 9100000) },
     ];
     for (const asset of assets) {
@@ -47,7 +45,16 @@ export async function createUnityPackage(effects, settingsFor, onProgress = () =
   return new Blob([gz], { type: "application/gzip" });
 }
 
-function animationYaml(effect, sheetGuid, spriteFileIds, fps, frameCount, loop) {
+function animationYaml(effect, sheetGuid, spriteFileIds, fps, frameCount, loop, exportTarget = "spriteRenderer") {
+  const yaml = spriteRendererAnimationYaml(effect, sheetGuid, spriteFileIds, fps, frameCount, loop);
+  if (exportTarget !== "uiImage") return yaml;
+  const imageScript = "{fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}";
+  return yaml
+    .replace("classID: 212\n    script: {fileID: 0}", `classID: 114\n    script: ${imageScript}`)
+    .replace("script: {fileID: 0}\n      typeID: 212", `script: ${imageScript}\n      typeID: 114`);
+}
+
+function spriteRendererAnimationYaml(effect, sheetGuid, spriteFileIds, fps, frameCount, loop) {
   const keyframes = spriteFileIds.map((fileId, index) => `    - time: ${(index / fps).toFixed(6)}\n      value: {fileID: ${fileId}, guid: ${sheetGuid}, type: 3}`).join("\n");
   const objectReferences = spriteFileIds.map((fileId) => `    - {fileID: ${fileId}, guid: ${sheetGuid}, type: 3}`).join("\n");
   const duration = frameCount / fps;
@@ -151,4 +158,5 @@ async function gzip(bytes) {
   const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip"));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
+
 

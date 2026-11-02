@@ -56,17 +56,23 @@ export function createPlayer(canvas, effect, config = {}, { scale = 1 } = {}) {
   };
 }
 
-export async function renderSpriteSheet(effect, config, onProgress = () => {}) {
+export async function renderSpriteSheet(effect, config, onProgress = () => {}, selectedFrameIndices = []) {
   const { meta, mod } = effect;
   const fps = config.fps ?? meta.fps;
   const [frameWidth, frameHeight] = meta.size;
-  const count = Math.max(1, Math.round(meta.duration * fps) + (meta.loop ? 0 : 1));
+  const loop = config.loop ?? meta.loop;
+  const totalFrames = Math.max(1, Math.round(meta.duration * fps) + (loop ? 0 : 1));
+  const chosenFrames = [...new Set(Array.isArray(selectedFrameIndices) ? selectedFrameIndices : [])]
+    .filter((index) => Number.isInteger(index) && index >= 0 && index < totalFrames);
+  const sourceFrameIndices = chosenFrames.length ? chosenFrames : Array.from({ length: totalFrames }, (_, index) => index);
+  const count = sourceFrameIndices.length;
   const frame = createFrame(frameWidth, frameHeight);
-  const instance = createFx(mod, {
+  const options = {
     x: meta.origin[0],
     y: meta.origin[1],
     ...(config.palette ? { palette: PALETTES[config.palette] } : {}),
-  });
+  };
+  let instance = createFx(mod, options);
   const columns = Math.min(count, Math.max(1, Math.ceil(Math.sqrt((count * frameHeight) / frameWidth))));
   const rows = Math.ceil(count / columns);
   const sheetWidth = columns * frameWidth;
@@ -75,8 +81,16 @@ export async function renderSpriteSheet(effect, config, onProgress = () => {}) {
   sheetCanvas.width = sheetWidth;
   sheetCanvas.height = sheetHeight;
   const sheetContext = sheetCanvas.getContext("2d", { alpha: true });
+  let previousSourceIndex = 0;
+
   for (let index = 0; index < count; index += 1) {
-    if (index) instance.update(1 / fps);
+    const sourceIndex = sourceFrameIndices[index];
+    if (sourceIndex < previousSourceIndex) {
+      instance = createFx(mod, options);
+      previousSourceIndex = 0;
+    }
+    if (sourceIndex > previousSourceIndex) instance.update((sourceIndex - previousSourceIndex) / fps);
+    previousSourceIndex = sourceIndex;
     clearFrame(frame);
     instance.draw(frame);
     const rgba = new Uint8ClampedArray(frameWidth * frameHeight * 4);
@@ -84,7 +98,7 @@ export async function renderSpriteSheet(effect, config, onProgress = () => {}) {
     const x = (index % columns) * frameWidth;
     const y = Math.floor(index / columns) * frameHeight;
     sheetContext.putImageData(new ImageData(rgba, frameWidth, frameHeight), x, y);
-    if (index % 8 === 0) {
+    if (index % 8 === 0 || index === count - 1) {
       onProgress((index + 1) / count);
       await new Promise((resolve) => setTimeout(resolve, 0));
     }
@@ -92,8 +106,8 @@ export async function renderSpriteSheet(effect, config, onProgress = () => {}) {
 
   const sheetBlob = await new Promise((resolve, reject) => sheetCanvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("PNG 인코딩에 실패했습니다.")), "image/png"));
   const json = {
-    frames: Array.from({ length: count }, (_, index) => ({
-      filename: `${effect.slug} ${index}`,
+    frames: sourceFrameIndices.map((sourceIndex, index) => ({
+      filename: `${effect.slug} ${sourceIndex}`,
       frame: { x: (index % columns) * frameWidth, y: Math.floor(index / columns) * frameHeight, w: frameWidth, h: frameHeight },
       rotated: false,
       trimmed: false,
@@ -113,14 +127,17 @@ export async function renderSpriteSheet(effect, config, onProgress = () => {}) {
         id: effect.id,
         name: effect.name,
         fps,
-        loop: meta.loop,
+        loop,
         frames: count,
+        totalFrames,
+        selectedFrames: chosenFrames,
         frameSize: [frameWidth, frameHeight],
         pivot: meta.origin,
         columns,
       },
     },
   };
-  return { sheetBlob, json, fps, frameWidth, frameHeight, columns, count };
+  return { sheetBlob, json, fps, frameWidth, frameHeight, columns, count, totalFrames, sourceFrameIndices };
 }
+
 
